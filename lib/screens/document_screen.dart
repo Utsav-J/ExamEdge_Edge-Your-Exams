@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/chat_provider.dart';
+// import 'package:provider/provider.dart';
+// import '../providers/chat_provider.dart';
 import 'document_summary_screen.dart';
 import 'document_quiz_screen.dart';
 import 'document_resources_screen.dart';
