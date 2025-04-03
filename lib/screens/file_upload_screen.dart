@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'chat_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/chat_provider.dart';
+import 'document_processing_screen.dart';
 
 class FileUploadScreen extends StatefulWidget {
   const FileUploadScreen({super.key});
@@ -11,41 +13,48 @@ class FileUploadScreen extends StatefulWidget {
 
 class _FileUploadScreenState extends State<FileUploadScreen> {
   String? _selectedFileName;
-  bool _isLoading = false;
+  String? _selectedFileType;
+  bool _isDragging = false;
 
   Future<void> _pickFile() async {
     try {
-      setState(() => _isLoading = true);
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'txt'],
+        allowedExtensions: ['pdf', 'ppt', 'pptx'],
       );
 
       if (result != null) {
         setState(() {
           _selectedFileName = result.files.single.name;
+          _selectedFileType = result.files.single.extension;
         });
       }
-    } finally {
-      setState(() => _isLoading = false);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error picking file: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     }
   }
 
-  void _handleAction(String action) {
+  void _processFile() {
     if (_selectedFileName == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please upload a file first')),
+        SnackBar(
+          content: const Text('Please select a file first'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
       return;
     }
 
-    // Navigate to chat screen with the selected action
+    // Navigate to document processing screen
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ChatScreen(
-          initialMessage: 'I want to $action the file: $_selectedFileName',
-        ),
+        builder: (context) => const DocumentProcessingScreen(),
       ),
     );
   }
@@ -53,92 +62,147 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
+      appBar: AppBar(
+        title: const Text('Upload Document'),
+      ),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    const Icon(
-                      Icons.upload_file,
-                      size: 48,
-                      color: Color(0xFF10A37F),
+            // File Upload Section
+            DragTarget<Object>(
+              onWillAccept: (data) {
+                setState(() {
+                  _isDragging = true;
+                });
+                return true;
+              },
+              onAccept: (data) {
+                setState(() {
+                  _isDragging = false;
+                });
+                // Handle file drop
+                _pickFile();
+              },
+              onLeave: (data) {
+                setState(() {
+                  _isDragging = false;
+                });
+              },
+              builder: (context, candidateData, rejectedData) {
+                return Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: _isDragging
+                        ? Theme.of(context).colorScheme.primaryContainer
+                        : Theme.of(context).colorScheme.surfaceVariant,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _isDragging
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.transparent,
+                      width: 2,
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _selectedFileName ?? 'No file selected',
-                      style: Theme.of(context).textTheme.titleMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: _isLoading ? null : _pickFile,
-                      icon: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.upload),
-                      label: Text(_selectedFileName == null
-                          ? 'Upload File'
-                          : 'Change File'),
-                    ),
-                  ],
-                ),
-              ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.cloud_upload,
+                        size: 48,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _isDragging
+                            ? 'Drop your file here'
+                            : 'Drag and drop your file here',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'or',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: _pickFile,
+                        icon: const Icon(Icons.file_upload),
+                        label: const Text('Browse Files'),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Supported formats: PDF, PPT, PPTX',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 24),
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              alignment: WrapAlignment.center,
-              children: [
-                _buildActionButton(
-                  context,
-                  'Summarize',
-                  Icons.summarize,
-                  () => _handleAction('summarize'),
-                ),
-                _buildActionButton(
-                  context,
-                  'Generate MCQ',
-                  Icons.quiz,
-                  () => _handleAction('generate MCQ from'),
-                ),
-                _buildActionButton(
-                  context,
-                  'Find Study Materials',
-                  Icons.school,
-                  () => _handleAction('find study materials related to'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildActionButton(
-    BuildContext context,
-    String label,
-    IconData icon,
-    VoidCallback onPressed,
-  ) {
-    return SizedBox(
-      width: 160,
-      child: ElevatedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon),
-        label: Text(label),
-        style: ElevatedButton.styleFrom(
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 16),
+            // Selected File Info
+            if (_selectedFileName != null) ...[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Selected File',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            _selectedFileType == 'pdf'
+                                ? Icons.picture_as_pdf
+                                : Icons.slideshow,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _selectedFileName!,
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _selectedFileName = null;
+                                _selectedFileType = null;
+                              });
+                            },
+                            icon: const Icon(Icons.delete),
+                            label: const Text('Remove'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _processFile,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text('Process Document'),
+              ),
+            ],
+          ],
         ),
       ),
     );

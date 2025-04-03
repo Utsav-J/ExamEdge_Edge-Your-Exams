@@ -8,9 +8,14 @@ class ChatProvider with ChangeNotifier {
   List<ChatMessage> get messages => _messages;
   bool get isLoading => _isLoading;
 
-  void addMessage(String content, bool isUser) {
+  void addMessage(String content, bool isUser, {List<String>? citations}) {
     _messages.add(
-      ChatMessage(content: content, isUser: isUser, timestamp: DateTime.now()),
+      ChatMessage(
+        content: content,
+        isUser: isUser,
+        timestamp: DateTime.now(),
+        citations: citations,
+      ),
     );
     notifyListeners();
   }
@@ -28,10 +33,11 @@ class ChatProvider with ChangeNotifier {
     // Simulate API delay
     await Future.delayed(const Duration(seconds: 1));
 
-    // Add AI response
+    // Add AI response with citations
     addMessage(
-      "This is a simulated response. In a real implementation, this would be connected to an AI API.",
+      "This is a simulated response with citations from the document.",
       false,
+      citations: ['Document 1, Page 2', 'Document 2, Page 5'],
     );
 
     _isLoading = false;
