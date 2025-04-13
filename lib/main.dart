@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'screens/main_screen.dart';
-import 'providers/chat_provider.dart';
 import 'providers/theme_provider.dart';
 
 void main() {
