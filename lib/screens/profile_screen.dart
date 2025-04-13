@@ -65,7 +65,8 @@ class ProfileScreen extends StatelessWidget {
                         subtitle: const Text('Toggle dark/light theme'),
                         value: themeProvider.isDarkMode,
                         onChanged: (value) {
-                          themeProvider.toggleTheme();
+                          themeProvider.setThemeMode(
+                              value ? ThemeMode.dark : ThemeMode.light);
                         },
                       );
                     },

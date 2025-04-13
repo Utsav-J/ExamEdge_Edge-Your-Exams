@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 // import 'package:provider/provider.dart';
 // import '../providers/chat_provider.dart';
-import 'document_processing_screen.dart';
+import '../services/storage_service.dart';
+import '../models/recent_document.dart';
+import 'document_screen.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class FileUploadScreen extends StatefulWidget {
   const FileUploadScreen({super.key});
@@ -14,7 +18,19 @@ class FileUploadScreen extends StatefulWidget {
 class _FileUploadScreenState extends State<FileUploadScreen> {
   String? _selectedFileName;
   String? _selectedFileType;
+  String? _selectedFilePath;
   bool _isDragging = false;
+  late StorageService _storageService;
+
+  @override
+  void initState() {
+    super.initState();
+    _initStorage();
+  }
+
+  Future<void> _initStorage() async {
+    _storageService = await StorageService.init();
+  }
 
   Future<void> _pickFile() async {
     try {
@@ -27,6 +43,7 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
         setState(() {
           _selectedFileName = result.files.single.name;
           _selectedFileType = result.files.single.extension;
+          _selectedFilePath = result.files.single.path;
         });
       }
     } catch (e) {
@@ -39,8 +56,18 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
     }
   }
 
-  void _processFile() {
-    if (_selectedFileName == null) {
+  Future<String> _saveFileLocally(String originalPath) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final fileName = _selectedFileName!;
+    final savedFile = File('${directory.path}/$fileName');
+
+    // Copy the file to local storage
+    await File(originalPath).copy(savedFile.path);
+    return savedFile.path;
+  }
+
+  void _processFile() async {
+    if (_selectedFileName == null || _selectedFilePath == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Please select a file first'),
@@ -50,13 +77,45 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
       return;
     }
 
-    // Navigate to document processing screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const DocumentProcessingScreen(),
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(
+          child: CircularProgressIndicator(),
+        );
+      },
+    );
+
+    // Save to recent documents
+    final localFilePath = await _saveFileLocally(_selectedFilePath!);
+    await _storageService.addRecentDocument(
+      RecentDocument(
+        fileName: _selectedFileName!,
+        fileType: _selectedFileType!,
+        lastAccessed: DateTime.now(),
+        localFilePath: localFilePath,
       ),
     );
+
+    // Wait for 2 seconds
+    await Future.delayed(const Duration(seconds: 2));
+
+    // Close the loading dialog
+    if (context.mounted) {
+      Navigator.pop(context);
+    }
+
+    // Navigate to document screen
+    if (context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const DocumentScreen(),
+        ),
+      );
+    }
   }
 
   @override
@@ -182,6 +241,7 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
                               setState(() {
                                 _selectedFileName = null;
                                 _selectedFileType = null;
+                                _selectedFilePath = null;
                               });
                             },
                             icon: const Icon(Icons.delete),

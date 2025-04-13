@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-// import 'package:provider/provider.dart';
-// import '../providers/chat_provider.dart';
 
 class DocumentChatScreen extends StatefulWidget {
   const DocumentChatScreen({super.key});
