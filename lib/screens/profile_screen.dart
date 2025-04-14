@@ -18,7 +18,7 @@ class ProfileScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Profile Section
-            Card(
+            const Card(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -94,8 +94,6 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Document History Section
             const Text(
               'Meet the developers',
               style: TextStyle(
