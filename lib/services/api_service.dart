@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class ApiService {
-  static const String baseUrl = 'https://0948-34-70-242-210.ngrok-free.app';
+  static const String baseUrl = 'https://a285-34-70-242-210.ngrok-free.app';
 
   Future<Map<String, dynamic>> uploadPdf(File file) async {
     try {
