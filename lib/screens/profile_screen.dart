@@ -18,25 +18,32 @@ class ProfileScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Profile Section
-            const Card(
+            Card(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 50,
-                      child: Icon(Icons.person, size: 50),
+                      child: ClipOval(
+                        child: Image.asset(
+                          "assets/images/user.jpg",
+                          width: 100, // diameter (2 * radius)
+                          height: 100,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'John Doe',
+                      'Utsav Jaiswal',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const Text(
-                      'john.doe@example.com',
+                      'uj8866@srmist.edu.in',
                       style: TextStyle(
                         color: Colors.grey,
                       ),
