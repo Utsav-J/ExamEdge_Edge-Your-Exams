@@ -231,6 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         builder: (context) => DocumentScreen(
                                           uniqueFilename:
                                               document.uniqueFilename,
+                                          fileName: document.fileName,
                                         ),
                                       ),
                                     );

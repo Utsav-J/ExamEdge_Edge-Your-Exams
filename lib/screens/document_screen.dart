@@ -6,9 +6,10 @@ import 'package:flutter/material.dart';
 
 class DocumentScreen extends StatefulWidget {
   final String uniqueFilename;
-
+  final String fileName;
   const DocumentScreen({
     super.key,
+    required this.fileName,
     required this.uniqueFilename,
   });
 
@@ -26,7 +27,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
     super.initState();
     _screens = [
       DocumentSummaryScreen(uniqueFilename: widget.uniqueFilename),
-      const DocumentQuizScreen(),
+      DocumentQuizScreen(uniqueFilename: widget.uniqueFilename),
       const DocumentResourcesScreen(),
       const DocumentChatScreen(),
     ];
@@ -36,7 +37,10 @@ class _DocumentScreenState extends State<DocumentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Document Name'),
+        title: Text(
+          widget.fileName,
+          overflow: TextOverflow.fade,
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),

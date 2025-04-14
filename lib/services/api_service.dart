@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:examedge/models/mcq.dart';
 
 class ApiService {
   static const String baseUrl = 'https://a285-34-70-242-210.ngrok-free.app';
@@ -37,6 +38,24 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Error generating summary: $e');
+    }
+  }
+
+  Future<List<MCQ>> generateMCQs(String filename, {int? startPage}) async {
+    try {
+      final url = Uri.parse(
+          '$baseUrl/generate-mcqs/$filename${startPage != null ? '?start_page=$startPage' : ''}');
+      final response = await http.post(url);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final List<dynamic> mcqsJson = data['mcqs'];
+        return mcqsJson.map((json) => MCQ.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to generate MCQs: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error generating MCQs: $e');
     }
   }
 }

@@ -2,21 +2,24 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/recent_document.dart';
+import '../models/mcq.dart';
 
 class StorageService {
   static const String _recentDocumentsKey = 'recent_documents';
   static const String _themeModeKey = 'theme_mode';
   static const String _documentSummariesKey = 'document_summaries';
+  static const String _mcqsKey = 'document_mcqs';
   // static const int _maxRecentDocuments = 10;
 
   late SharedPreferences _prefs;
+  static late StorageService _instance;
 
   StorageService._();
 
   static Future<StorageService> init() async {
-    final service = StorageService._();
-    service._prefs = await SharedPreferences.getInstance();
-    return service;
+    _instance = StorageService._();
+    _instance._prefs = await SharedPreferences.getInstance();
+    return _instance;
   }
 
   // Recent Documents
@@ -142,5 +145,45 @@ class StorageService {
       print('Error parsing document summaries: $e');
       return {};
     }
+  }
+
+  // MCQ Caching Methods
+  Future<void> cacheMCQs(String uniqueFilename, List<MCQ> mcqs) async {
+    final summaries = await getCachedMCQs();
+    summaries[uniqueFilename] = mcqs;
+    await _prefs.setString(
+        _mcqsKey,
+        jsonEncode({
+          for (var entry in summaries.entries)
+            entry.key: entry.value
+                .map((mcq) => {
+                      'question': mcq.question,
+                      'options': mcq.options,
+                      'answer': mcq.answer,
+                    })
+                .toList(),
+        }));
+  }
+
+  Future<Map<String, List<MCQ>>> getCachedMCQs() async {
+    final String? data = _prefs.getString(_mcqsKey);
+    if (data == null) return {};
+
+    final Map<String, dynamic> json = jsonDecode(data);
+    return {
+      for (var entry in json.entries)
+        entry.key: (entry.value as List)
+            .map((mcqJson) => MCQ.fromJson(mcqJson))
+            .toList(),
+    };
+  }
+
+  Future<List<MCQ>?> getCachedMCQsForDocument(String uniqueFilename) async {
+    final summaries = await getCachedMCQs();
+    return summaries[uniqueFilename];
+  }
+
+  Future<void> clearMCQs() async {
+    await _prefs.remove(_mcqsKey);
   }
 }
