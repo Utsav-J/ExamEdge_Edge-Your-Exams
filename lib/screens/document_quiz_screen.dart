@@ -169,6 +169,7 @@ class _DocumentQuizScreenState extends State<DocumentQuizScreen> {
   Widget _buildQuizScreen() {
     final currentQuestion = _mcqs![_currentQuestionIndex];
     final selectedAnswer = _userAnswers[_currentQuestionIndex];
+    final hasSubmitted = _userAnswers[_currentQuestionIndex] != null;
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -198,26 +199,49 @@ class _DocumentQuizScreenState extends State<DocumentQuizScreen> {
           ),
           const SizedBox(height: 24),
 
-          // Options
+          // Updated options with feedback
           ...currentQuestion.options.map((option) {
             final isSelected = selectedAnswer == option;
-            final isCorrect = _showResults && option == currentQuestion.answer;
+            final isCorrect = option == currentQuestion.answer;
+            final showFeedback = hasSubmitted;
+
+            Color? backgroundColor;
+            Color? borderColor;
+            IconData? trailingIcon;
+
+            if (showFeedback && isSelected) {
+              if (isCorrect) {
+                backgroundColor = Colors.green.withOpacity(0.1);
+                borderColor = Colors.green;
+                trailingIcon = Icons.check_circle;
+              } else {
+                backgroundColor = Colors.red.withOpacity(0.1);
+                borderColor = Colors.red;
+                trailingIcon = Icons.cancel;
+              }
+            } else if (showFeedback && isCorrect) {
+              backgroundColor = Colors.green.withOpacity(0.1);
+              borderColor = Colors.green;
+              trailingIcon = Icons.check_circle;
+            }
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
               child: InkWell(
-                onTap: () => _selectAnswer(option),
+                onTap: hasSubmitted ? null : () => _selectAnswer(option),
                 child: Container(
                   padding: const EdgeInsets.all(16.0),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primaryContainer
-                        : Theme.of(context).colorScheme.surface,
+                    color: backgroundColor ??
+                        (isSelected
+                            ? Theme.of(context).colorScheme.primaryContainer
+                            : Theme.of(context).colorScheme.surface),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.outline,
+                      color: borderColor ??
+                          (isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.outline),
                     ),
                   ),
                   child: Row(
@@ -237,12 +261,32 @@ class _DocumentQuizScreenState extends State<DocumentQuizScreen> {
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
                       ),
+                      if (showFeedback && trailingIcon != null)
+                        Icon(
+                          trailingIcon,
+                          color: isCorrect ? Colors.green : Colors.red,
+                        ),
                     ],
                   ),
                 ),
               ),
             );
           }).toList(),
+
+          // Submit button
+          if (selectedAnswer != null && !hasSubmitted)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    // This will trigger the feedback display
+                    _userAnswers[_currentQuestionIndex] = selectedAnswer;
+                  });
+                },
+                child: const Text('Submit Answer'),
+              ),
+            ),
 
           const Spacer(),
 
@@ -255,13 +299,14 @@ class _DocumentQuizScreenState extends State<DocumentQuizScreen> {
                 icon: const Icon(Icons.arrow_back),
                 label: const Text('Previous'),
               ),
-              ElevatedButton.icon(
-                onPressed: selectedAnswer != null ? _nextQuestion : null,
-                icon: const Icon(Icons.arrow_forward),
-                label: Text(_currentQuestionIndex == _mcqs!.length - 1
-                    ? 'Finish'
-                    : 'Next'),
-              ),
+              if (hasSubmitted)
+                ElevatedButton.icon(
+                  onPressed: _nextQuestion,
+                  icon: const Icon(Icons.arrow_forward),
+                  label: Text(_currentQuestionIndex == _mcqs!.length - 1
+                      ? 'Finish'
+                      : 'Next'),
+                ),
             ],
           ),
         ],
