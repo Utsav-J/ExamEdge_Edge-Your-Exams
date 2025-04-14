@@ -1,5 +1,5 @@
-import 'package:chat_gpt_clone/providers/theme_provider.dart';
-import 'package:chat_gpt_clone/reusable/modern_welcome_card.dart';
+import 'package:examedge/providers/theme_provider.dart';
+import 'package:examedge/reusable/modern_welcome_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/storage_service.dart';
@@ -125,7 +125,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const ModernWelcomeCard(),
                               const Icon(
                                 Icons.folder_open,
                                 size: 64,
@@ -222,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   title: Text(document.fileName),
                                   subtitle: Text(
-                                    'Last accessed: ${_formatDate(document.lastAccessed)}',
+                                    'Edged: ${_formatDate(document.lastAccessed)}',
                                   ),
                                   trailing: const Icon(Icons.chevron_right),
                                   onTap: () {

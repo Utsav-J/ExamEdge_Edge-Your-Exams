@@ -1,4 +1,4 @@
-import 'package:chat_gpt_clone/screens/results_screen.dart';
+import 'package:examedge/screens/results_screen.dart';
 import 'package:flutter/material.dart';
 
 class DocumentProcessingScreen extends StatefulWidget {

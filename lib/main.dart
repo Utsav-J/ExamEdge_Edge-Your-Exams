@@ -34,6 +34,7 @@ class _MyAppState extends State<MyApp> {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'ExamEdge',
       themeMode: themeProvider.themeMode,
       theme: ThemeData(

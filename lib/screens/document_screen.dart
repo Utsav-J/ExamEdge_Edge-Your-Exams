@@ -1,7 +1,7 @@
-import 'package:chat_gpt_clone/screens/document_chat_screen.dart';
-import 'package:chat_gpt_clone/screens/document_quiz_screen.dart';
-import 'package:chat_gpt_clone/screens/document_resources_screen.dart';
-import 'package:chat_gpt_clone/screens/document_summary_screen.dart';
+import 'package:examedge/screens/document_chat_screen.dart';
+import 'package:examedge/screens/document_quiz_screen.dart';
+import 'package:examedge/screens/document_resources_screen.dart';
+import 'package:examedge/screens/document_summary_screen.dart';
 import 'package:flutter/material.dart';
 
 class DocumentScreen extends StatefulWidget {

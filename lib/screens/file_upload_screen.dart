@@ -77,9 +77,9 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
       // Upload to backend
       final uploadResponse = await _apiService.uploadPdf(_selectedFile!);
 
-      if (uploadResponse == null) {
-        throw 'Upload failed: No response from server';
-      }
+      // if (uploadResponse == null) {
+      //   throw 'Upload failed: No response from server';
+      // }
 
       final uniqueFilename = uploadResponse['unique_filename'];
       if (uniqueFilename == null) {
