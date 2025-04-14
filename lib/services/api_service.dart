@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:examedge/models/mcq.dart';
+import 'package:examedge/models/faculty.dart';
 
 class ApiService {
   static const String baseUrl = 'https://b1ea-34-19-127-113.ngrok-free.app';
@@ -88,6 +89,24 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Error fetching videos: $e');
+    }
+  }
+
+  Future<List<Faculty>> fetchFaculties(String filename) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/fetch-faculties/$filename'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final facultiesJson = data['faculties'] as List;
+        return facultiesJson.map((json) => Faculty.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to fetch faculties: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching faculties: $e');
     }
   }
 }

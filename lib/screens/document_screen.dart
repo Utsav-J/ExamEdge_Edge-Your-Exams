@@ -3,6 +3,7 @@ import 'package:examedge/screens/document_quiz_screen.dart';
 import 'package:examedge/screens/document_resources_screen.dart';
 import 'package:examedge/screens/document_summary_screen.dart';
 import 'package:flutter/material.dart';
+import '../reusable/document_fab.dart';
 
 class DocumentScreen extends StatefulWidget {
   final String uniqueFilename;
@@ -79,6 +80,10 @@ class _DocumentScreenState extends State<DocumentScreen> {
           ),
         ],
       ),
+      floatingActionButton: DocumentFAB(
+        uniqueFilename: widget.uniqueFilename,
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
