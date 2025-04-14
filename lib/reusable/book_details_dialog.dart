@@ -1,7 +1,6 @@
 import 'package:examedge/utils/url_launch_utils.dart';
 import 'package:flutter/material.dart';
 import '../models/book.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class BookDetailsDialog extends StatelessWidget {
   final Book book;

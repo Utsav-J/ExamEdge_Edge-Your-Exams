@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:examedge/models/mcq.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://a285-34-70-242-210.ngrok-free.app';
+  static const String baseUrl = 'https://b1ea-34-19-127-113.ngrok-free.app';
 
   Future<Map<String, dynamic>> uploadPdf(File file) async {
     try {
@@ -56,6 +56,22 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Error generating MCQs: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchBooks(String filename) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/fetch-books/$filename'),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to fetch books: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching books: $e');
     }
   }
 }

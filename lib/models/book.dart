@@ -1,4 +1,5 @@
 class Book {
+  final String topic;
   final String title;
   final String authors;
   final String description;
@@ -6,6 +7,7 @@ class Book {
   final String thumbnail;
 
   Book({
+    required this.topic,
     required this.title,
     required this.authors,
     required this.description,
@@ -13,8 +15,9 @@ class Book {
     required this.thumbnail,
   });
 
-  factory Book.fromJson(Map<String, dynamic> json) {
+  factory Book.fromJson(String topic, Map<String, dynamic> json) {
     return Book(
+      topic: topic,
       title: json['title'] as String,
       authors: json['authors'] as String,
       description: json['description'] as String,

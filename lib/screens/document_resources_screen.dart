@@ -3,9 +3,60 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/book.dart';
 import '../reusable/book_details_dialog.dart';
+import '../services/api_service.dart';
+import 'package:html_unescape/html_unescape.dart';
 
-class DocumentResourcesScreen extends StatelessWidget {
-  const DocumentResourcesScreen({super.key});
+class DocumentResourcesScreen extends StatefulWidget {
+  final String uniqueFilename;
+
+  const DocumentResourcesScreen({
+    super.key,
+    required this.uniqueFilename,
+  });
+
+  @override
+  State<DocumentResourcesScreen> createState() =>
+      _DocumentResourcesScreenState();
+}
+
+class _DocumentResourcesScreenState extends State<DocumentResourcesScreen> {
+  final unescape = HtmlUnescape();
+  final _apiService = ApiService();
+  bool _isLoading = true;
+  String? _error;
+  List<Book> _books = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBooks();
+  }
+
+  Future<void> _loadBooks() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final response = await _apiService.fetchBooks(widget.uniqueFilename);
+      final booksData = response['books'][0] as Map<String, dynamic>;
+
+      final books = booksData.entries.map((entry) {
+        return Book.fromJson(entry.key, entry.value as Map<String, dynamic>);
+      }).toList();
+
+      setState(() {
+        _books = books;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Error loading books: $e';
+        _isLoading = false;
+      });
+    }
+  }
 
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);
@@ -21,46 +72,40 @@ class DocumentResourcesScreen extends StatelessWidget {
     );
   }
 
-  // Example book data - in a real app, this would come from an API or service
-  List<Book> _getExampleBooks() {
-    return [
-      Book.fromJson({
-        "title":
-            "AWS certification guide - AWS Certified Solutions Architect - Professional",
-        "authors": "Cybellium Ltd",
-        "description":
-            "AWS Certification Guide - AWS Certified Solutions Architect – Professional Elevate Your Architectural Expertise to the Professional Level Embark on a transformative journey to the pinnacle of AWS architecture with this in-depth guide, designed specifically for those aspiring to become AWS Certified Solutions Architects at the Professional level.",
-        "preview":
-            "http://books.google.com/books?id=rfboEAAAQBAJ&pg=PA54&dq=IAM+Users&hl=&cd=1&source=gbs_api",
-        "thumbnail":
-            "http://books.google.com/books/content?id=rfboEAAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
-      }),
-      Book.fromJson({
-        "title": "Flutter Development for Beginners",
-        "authors": "John Doe",
-        "description":
-            "A comprehensive guide to Flutter development for beginners. Learn how to build beautiful, natively compiled applications for mobile, web, and desktop from a single codebase.",
-        "preview":
-            "http://books.google.com/books?id=example2&pg=PA1&dq=Flutter&hl=&cd=1&source=gbs_api",
-        "thumbnail":
-            "http://books.google.com/books/content?id=example2&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
-      }),
-      Book.fromJson({
-        "title": "Advanced Machine Learning Techniques",
-        "authors": "Jane Smith",
-        "description":
-            "Explore advanced machine learning techniques including deep learning, reinforcement learning, and natural language processing with practical examples and real-world applications.",
-        "preview":
-            "http://books.google.com/books?id=example3&pg=PA1&dq=Machine+Learning&hl=&cd=1&source=gbs_api",
-        "thumbnail":
-            "http://books.google.com/books/content?id=example3&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
-      }),
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
-    final books = _getExampleBooks();
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 48,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadBooks,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return ListView(
       padding: const EdgeInsets.all(16.0),
@@ -167,124 +212,125 @@ class DocumentResourcesScreen extends StatelessWidget {
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      'Reference Books',
-                      style: Theme.of(context).textTheme.titleLarge,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Reference Books',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          Text(
+                            'Based on topics in your document',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: books.length,
-                  itemBuilder: (context, index) {
-                    final book = books[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12.0),
-                      child: InkWell(
-                        onTap: () => _showBookDetails(context, book),
-                        child: Hero(
-                          tag: 'book-${book.title}',
-                          child: Material(
-                            type: MaterialType.transparency,
-                            child: Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Book Cover
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: Image.network(
-                                      book.thumbnail,
-                                      width: 60,
-                                      height: 90,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                        return Container(
-                                          width: 60,
-                                          height: 90,
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey[300],
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                          ),
-                                          child: const Center(
-                                            child: Icon(
-                                              Icons.book,
-                                              size: 24,
-                                              color: Colors.white,
+                if (_books.isEmpty)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text('No relevant books found'),
+                    ),
+                  )
+                else
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _books.length,
+                    itemBuilder: (context, index) {
+                      final book = _books[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12.0),
+                        child: InkWell(
+                          onTap: () => _showBookDetails(context, book),
+                          child: Hero(
+                            tag: 'book-${book.title}',
+                            child: Material(
+                              type: MaterialType.transparency,
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Book Cover
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: Image.network(
+                                        book.thumbnail,
+                                        width: 60,
+                                        height: 90,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                          return Container(
+                                            width: 60,
+                                            height: 90,
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey[300],
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                             ),
-                                          ),
-                                        );
-                                      },
+                                            child: const Center(
+                                              child: Icon(
+                                                Icons.book,
+                                                size: 24,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  // Book Info
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          book.title,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          book.authors,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          book.description,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.star,
-                                              size: 16,
-                                              color: Colors.amber[700],
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              '4.5',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall,
-                                            ),
-                                            const Spacer(),
-                                            const Icon(Icons.arrow_forward_ios,
-                                                size: 16),
-                                          ],
-                                        ),
-                                      ],
+                                    const SizedBox(width: 12),
+                                    // Book Info
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            book.title,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            book.authors,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            unescape.convert(book.description),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                    // Add topic chip
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
               ],
             ),
           ),

@@ -28,7 +28,9 @@ class _DocumentScreenState extends State<DocumentScreen> {
     _screens = [
       DocumentSummaryScreen(uniqueFilename: widget.uniqueFilename),
       DocumentQuizScreen(uniqueFilename: widget.uniqueFilename),
-      const DocumentResourcesScreen(),
+      DocumentResourcesScreen(
+        uniqueFilename: widget.uniqueFilename,
+      ),
       const DocumentChatScreen(),
     ];
   }
