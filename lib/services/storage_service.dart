@@ -8,58 +8,39 @@ class StorageService {
   static const String _themeModeKey = 'theme_mode';
   static const int _maxRecentDocuments = 10;
 
-  final SharedPreferences _prefs;
+  late SharedPreferences _prefs;
 
-  StorageService._(this._prefs);
+  StorageService._();
 
   static Future<StorageService> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    return StorageService._(prefs);
+    final service = StorageService._();
+    service._prefs = await SharedPreferences.getInstance();
+    return service;
   }
 
   // Recent Documents
   List<RecentDocument> getRecentDocuments() {
-    final String? documentsJson = _prefs.getString(_recentDocumentsKey);
-    if (documentsJson == null) return [];
-
-    try {
-      final List<dynamic> documentsList = json.decode(documentsJson);
-      return documentsList.map((doc) => RecentDocument.fromJson(doc)).toList();
-    } catch (e) {
-      print('Error parsing recent documents: $e');
-      // If there's an error, clear the corrupted data
-      _prefs.remove(_recentDocumentsKey);
+    final documentsJson = _prefs.getString(_recentDocumentsKey);
+    if (documentsJson == null) {
       return [];
     }
+
+    final List<dynamic> documentsList = json.decode(documentsJson);
+    return documentsList.map((doc) => RecentDocument.fromJson(doc)).toList();
   }
 
-  Future<void> addRecentDocument(RecentDocument document) async {
-    try {
-      final documents = getRecentDocuments();
-
-      // Remove if document with same name exists
-      documents.removeWhere((doc) => doc.fileName == document.fileName);
-
-      // Add new document at the beginning
-      documents.insert(0, document);
-
-      // Keep only the most recent documents
-      if (documents.length > _maxRecentDocuments) {
-        documents.removeRange(_maxRecentDocuments, documents.length);
-      }
-
-      final List<Map<String, dynamic>> documentsJson =
-          documents.map((doc) => doc.toJson()).toList();
-
-      await _prefs.setString(
-        _recentDocumentsKey,
-        json.encode(documentsJson),
-      );
-    } catch (e) {
-      print('Error adding recent document: $e');
-      // If there's an error, clear the corrupted data
-      await _prefs.remove(_recentDocumentsKey);
+  Future<void> saveRecentDocument(RecentDocument document) async {
+    final documents = getRecentDocuments();
+    documents.insert(0, document);
+    print("documents $documents");
+    if (documents.length > 10) {
+      documents.removeLast();
     }
+    print("documents $documents");
+    print("got here");
+    await _prefs.setString(_recentDocumentsKey,
+        json.encode(documents.map((doc) => doc.toJson()).toList()));
+    print("got here again");
   }
 
   Future<void> clearRecentDocuments() async {

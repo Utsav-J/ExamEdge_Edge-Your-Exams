@@ -1,31 +1,42 @@
 class RecentDocument {
   final String fileName;
   final String fileType;
-  final DateTime lastAccessed;
   final String localFilePath;
+  final DateTime lastAccessed;
+  final String uniqueFilename;
 
   RecentDocument({
     required this.fileName,
     required this.fileType,
-    required this.lastAccessed,
     required this.localFilePath,
+    required this.lastAccessed,
+    required this.uniqueFilename,
   });
 
   Map<String, dynamic> toJson() {
     return {
       'fileName': fileName,
       'fileType': fileType,
-      'lastAccessed': lastAccessed.toIso8601String(),
       'localFilePath': localFilePath,
+      'lastAccessed': lastAccessed.toIso8601String(),
+      'uniqueFilename': uniqueFilename,
     };
   }
 
   factory RecentDocument.fromJson(Map<String, dynamic> json) {
+    // return RecentDocument(
+    //   fileName: json['fileName'] ,
+    //   fileType: json['fileType'],
+    //   localFilePath: json['localFilePath'],
+    //   lastAccessed: DateTime.parse(json['lastAccessed']),
+    //   uniqueFilename: json['uniqueFilename'],
+    // );
     return RecentDocument(
-      fileName: json['fileName'] as String,
-      fileType: json['fileType'] as String,
-      lastAccessed: DateTime.parse(json['lastAccessed'] as String),
-      localFilePath: json['localFilePath'] as String,
-    );
+        fileName: json['fileName'] ?? '',
+        fileType: json['fileType'] ?? '',
+        localFilePath: json['localFilePath'] ?? '',
+        lastAccessed:
+            DateTime.tryParse(json['lastAccessed'] ?? '') ?? DateTime.now(),
+        uniqueFilename: json['uniqueFilename'] ?? '');
   }
 }

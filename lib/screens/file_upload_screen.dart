@@ -1,12 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-// import 'package:provider/provider.dart';
-// import '../providers/chat_provider.dart';
 import '../services/storage_service.dart';
+import '../services/api_service.dart';
 import '../models/recent_document.dart';
-import 'document_screen.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 
 class FileUploadScreen extends StatefulWidget {
   const FileUploadScreen({super.key});
@@ -16,11 +13,12 @@ class FileUploadScreen extends StatefulWidget {
 }
 
 class _FileUploadScreenState extends State<FileUploadScreen> {
-  String? _selectedFileName;
-  String? _selectedFileType;
-  String? _selectedFilePath;
-  bool _isDragging = false;
+  File? _selectedFile;
+  bool _isUploading = false;
+  String? _errorMessage;
   late StorageService _storageService;
+  final _apiService = ApiService();
+  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -30,91 +28,87 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
 
   Future<void> _initStorage() async {
     _storageService = await StorageService.init();
+    setState(() {
+      _isInitialized = true;
+    });
   }
 
   Future<void> _pickFile() async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'ppt', 'pptx'],
+        allowedExtensions: ['pdf'],
       );
 
       if (result != null) {
         setState(() {
-          _selectedFileName = result.files.single.name;
-          _selectedFileType = result.files.single.extension;
-          _selectedFilePath = result.files.single.path;
+          _selectedFile = File(result.files.single.path!);
+          _errorMessage = null;
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error picking file: $e'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      setState(() {
+        _errorMessage = 'Error picking file: $e';
+      });
     }
   }
 
-  Future<String> _saveFileLocally(String originalPath) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final fileName = _selectedFileName!;
-    final savedFile = File('${directory.path}/$fileName');
-
-    // Copy the file to local storage
-    await File(originalPath).copy(savedFile.path);
-    return savedFile.path;
-  }
-
-  void _processFile() async {
-    if (_selectedFileName == null || _selectedFilePath == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please select a file first'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+  Future<void> _processDocument() async {
+    if (!_isInitialized) {
+      setState(() {
+        _errorMessage = 'Storage service not initialized';
+      });
       return;
     }
 
-    // Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
-      },
-    );
-
-    // Save to recent documents
-    final localFilePath = await _saveFileLocally(_selectedFilePath!);
-    await _storageService.addRecentDocument(
-      RecentDocument(
-        fileName: _selectedFileName!,
-        fileType: _selectedFileType!,
-        lastAccessed: DateTime.now(),
-        localFilePath: localFilePath,
-      ),
-    );
-
-    // Wait for 2 seconds
-    await Future.delayed(const Duration(seconds: 2));
-
-    // Close the loading dialog
-    if (context.mounted) {
-      Navigator.pop(context);
+    if (_selectedFile == null) {
+      setState(() {
+        _errorMessage = 'Please select a PDF file first';
+      });
+      return;
     }
 
-    // Navigate to document screen
-    if (context.mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const DocumentScreen(),
-        ),
+    setState(() {
+      _isUploading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Upload to backend
+      final uploadResponse = await _apiService.uploadPdf(_selectedFile!);
+
+      if (uploadResponse == null) {
+        throw 'Upload failed: No response from server';
+      }
+
+      final uniqueFilename = uploadResponse['unique_filename'];
+      if (uniqueFilename == null) {
+        throw 'Upload failed: No filename received';
+      }
+
+      // Save to local storage
+      final document = RecentDocument(
+        fileName: _selectedFile!.path.split('/').last,
+        fileType: 'pdf',
+        localFilePath: _selectedFile!.path,
+        lastAccessed: DateTime.now(),
+        uniqueFilename: uniqueFilename.toString(), // Ensure it's a string
       );
+
+      await _storageService.saveRecentDocument(document);
+
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage =
+            e is String ? e : 'Error processing document: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isUploading = false;
+      });
     }
   }
 
@@ -124,144 +118,65 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
       appBar: AppBar(
         title: const Text('Upload Document'),
       ),
-      body: SingleChildScrollView(
+      body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // File Upload Section
-            DragTarget<Object>(
-              onWillAccept: (data) {
-                setState(() {
-                  _isDragging = true;
-                });
-                return true;
-              },
-              onAccept: (data) {
-                setState(() {
-                  _isDragging = false;
-                });
-                // Handle file drop
-                _pickFile();
-              },
-              onLeave: (data) {
-                setState(() {
-                  _isDragging = false;
-                });
-              },
-              builder: (context, candidateData, rejectedData) {
-                return Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: _isDragging
-                        ? Theme.of(context).colorScheme.primaryContainer
-                        : Theme.of(context).colorScheme.surfaceVariant,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _isDragging
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.transparent,
-                      width: 2,
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.upload_file,
+                      size: 48,
+                      color: Color.fromARGB(255, 211, 188, 253),
                     ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.cloud_upload,
-                        size: 48,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _isDragging
-                            ? 'Drop your file here'
-                            : 'Drag and drop your file here',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'or',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: _pickFile,
-                        icon: const Icon(Icons.file_upload),
-                        label: const Text('Browse Files'),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Supported formats: PDF, PPT, PPTX',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                );
-              },
+                    const SizedBox(height: 16),
+                    Text(
+                      _selectedFile != null
+                          ? 'Selected: ${_selectedFile!.path.split('/').last}'
+                          : 'No file selected',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _isUploading ? null : _pickFile,
+                      icon: const Icon(Icons.file_upload),
+                      label: const Text('Select PDF'),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 24),
-
-            // Selected File Info
-            if (_selectedFileName != null) ...[
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Selected File',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(
-                            _selectedFileType == 'pdf'
-                                ? Icons.picture_as_pdf
-                                : Icons.slideshow,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _selectedFileName!,
-                              style: Theme.of(context).textTheme.bodyLarge,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                _selectedFileName = null;
-                                _selectedFileType = null;
-                                _selectedFilePath = null;
-                              });
-                            },
-                            icon: const Icon(Icons.delete),
-                            label: const Text('Remove'),
-                          ),
-                        ],
-                      ),
-                    ],
+            if (_errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  _errorMessage!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _processFile,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text('Process Document'),
+            const Spacer(),
+            ElevatedButton.icon(
+              onPressed: _isUploading ? null : _processDocument,
+              icon: _isUploading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(Icons.upload),
+              label: Text(_isUploading ? 'Processing...' : 'Process Document'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.all(16),
               ),
-            ],
+            ),
           ],
         ),
       ),
