@@ -1,4 +1,5 @@
 import 'package:chat_gpt_clone/providers/theme_provider.dart';
+import 'package:chat_gpt_clone/reusable/modern_welcome_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/storage_service.dart';
@@ -82,8 +83,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    // final colorScheme = Theme.of(context).colorScheme;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('ExamEdge'),
@@ -112,117 +111,139 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: !_isInitialized
           ? const Center(child: CircularProgressIndicator())
-          : _recentDocuments.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.folder_open,
-                        size: 64,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No documents yet',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const FileUploadScreen(),
-                            ),
-                          );
-                          if (result == true) {
-                            _loadRecentDocuments();
-                          }
-                        },
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add Document'),
-                      ),
-                    ],
+          : SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: ModernWelcomeCard(),
                   ),
-                )
-              : ListView.builder(
-                  itemCount: _recentDocuments.length,
-                  itemBuilder: (context, index) {
-                    final document = _recentDocuments[index];
-                    return Dismissible(
-                      key: Key(document.uniqueFilename),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 16.0),
-                        color: Theme.of(context).colorScheme.error,
-                        child: const Icon(
-                          Icons.delete,
-                          color: Colors.white,
-                        ),
-                      ),
-                      confirmDismiss: (direction) async {
-                        return await showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Delete Document'),
-                            content: Text(
-                              'Are you sure you want to delete ${document.fileName}?',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Cancel'),
+                  const SizedBox(height: 16),
+                  _recentDocuments.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const ModernWelcomeCard(),
+                              const Icon(
+                                Icons.folder_open,
+                                size: 64,
+                                color: Colors.grey,
                               ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: Text(
-                                  'Delete',
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.error,
-                                  ),
-                                ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No documents yet',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const FileUploadScreen(),
+                                    ),
+                                  );
+                                  if (result == true) {
+                                    _loadRecentDocuments();
+                                  }
+                                },
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add Document'),
                               ),
                             ],
                           ),
-                        );
-                      },
-                      onDismissed: (direction) {
-                        _deleteDocument(document);
-                      },
-                      child: Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 16.0,
-                          vertical: 8.0,
-                        ),
-                        child: ListTile(
-                          leading: Icon(
-                            document.fileType == 'pdf'
-                                ? Icons.picture_as_pdf
-                                : Icons.insert_drive_file,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                          title: Text(document.fileName),
-                          subtitle: Text(
-                            'Last accessed: ${_formatDate(document.lastAccessed)}',
-                          ),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => DocumentScreen(
-                                  uniqueFilename: document.uniqueFilename,
+                        )
+                      : ListView.builder(
+                          physics: const NeverScrollableScrollPhysics(),
+                          shrinkWrap: true,
+                          itemCount: _recentDocuments.length,
+                          itemBuilder: (context, index) {
+                            final document = _recentDocuments[index];
+                            return Dismissible(
+                              key: Key(document.uniqueFilename),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 16.0),
+                                color: Theme.of(context).colorScheme.error,
+                                child: const Icon(
+                                  Icons.delete,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              confirmDismiss: (direction) async {
+                                return await showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Delete Document'),
+                                    content: Text(
+                                      'Are you sure you want to delete ${document.fileName}?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: Text(
+                                          'Delete',
+                                          style: TextStyle(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .error,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                              onDismissed: (direction) {
+                                _deleteDocument(document);
+                              },
+                              child: Card(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                  vertical: 8.0,
+                                ),
+                                child: ListTile(
+                                  leading: Icon(
+                                    document.fileType == 'pdf'
+                                        ? Icons.picture_as_pdf
+                                        : Icons.insert_drive_file,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                                  title: Text(document.fileName),
+                                  subtitle: Text(
+                                    'Last accessed: ${_formatDate(document.lastAccessed)}',
+                                  ),
+                                  trailing: const Icon(Icons.chevron_right),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => DocumentScreen(
+                                          uniqueFilename:
+                                              document.uniqueFilename,
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             );
                           },
                         ),
-                      ),
-                    );
-                  },
-                ),
+                ],
+              ),
+            ),
     );
   }
 
