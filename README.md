@@ -1,4 +1,4 @@
-# ExamEdge
+![image](https://github.com/user-attachments/assets/2aa7cc4b-788d-4261-91fd-a4555f1f19d5)
 
 ExamEdge is an AI-powered study companion application that helps students analyze and learn from their study materials more effectively. The application uses advanced AI to generate summaries, key points, and interactive quizzes from uploaded documents.
 
