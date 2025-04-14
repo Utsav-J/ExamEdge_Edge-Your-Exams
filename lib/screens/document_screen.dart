@@ -80,10 +80,13 @@ class _DocumentScreenState extends State<DocumentScreen> {
           ),
         ],
       ),
-      floatingActionButton: DocumentFAB(
-        uniqueFilename: widget.uniqueFilename,
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: _selectedIndex == 0
+          ? DocumentFAB(
+              uniqueFilename: widget.uniqueFilename,
+            )
+          : null,
+      floatingActionButtonLocation:
+          _selectedIndex == 0 ? FloatingActionButtonLocation.endFloat : null,
     );
   }
 }
