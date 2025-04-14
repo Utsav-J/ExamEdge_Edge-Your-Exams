@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/document_summary.dart';
+import '../services/storage_service.dart';
 
 class DocumentSummaryScreen extends StatefulWidget {
   final String uniqueFilename;
@@ -16,6 +17,7 @@ class DocumentSummaryScreen extends StatefulWidget {
 
 class _DocumentSummaryScreenState extends State<DocumentSummaryScreen> {
   final _apiService = ApiService();
+  late final StorageService _storageService;
   DocumentSummary? _summary;
   bool _isLoading = true;
   String? _error;
@@ -23,12 +25,35 @@ class _DocumentSummaryScreenState extends State<DocumentSummaryScreen> {
   @override
   void initState() {
     super.initState();
+    _initStorage();
+  }
+
+  Future<void> _initStorage() async {
+    _storageService = await StorageService.init();
     _loadSummary();
   }
 
   Future<void> _loadSummary() async {
     try {
+      // Try to get cached summary first
+      final cachedSummary =
+          _storageService.getDocumentSummary(widget.uniqueFilename);
+
+      if (cachedSummary != null) {
+        setState(() {
+          _summary = DocumentSummary.fromJson(cachedSummary);
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // If no cached summary, fetch from API
       final response = await _apiService.generateSummary(widget.uniqueFilename);
+
+      // Cache the summary
+      await _storageService.saveDocumentSummary(
+          widget.uniqueFilename, response);
+
       setState(() {
         _summary = DocumentSummary.fromJson(response);
         _isLoading = false;
