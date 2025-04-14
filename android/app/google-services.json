@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "907910429450",
+    "project_id": "examedge-minor-project",
+    "storage_bucket": "examedge-minor-project.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:907910429450:android:b4607d4de0aa724c1198f3",
+        "android_client_info": {
+          "package_name": "com.examedge.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLf_BGwY_sqp3oqOtUpEonZpz_MgHCzJI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
