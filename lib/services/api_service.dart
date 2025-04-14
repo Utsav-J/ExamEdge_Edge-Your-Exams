@@ -74,4 +74,20 @@ class ApiService {
       throw Exception('Error fetching books: $e');
     }
   }
+
+  Future<Map<String, dynamic>> fetchVideos(String filename) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/fetch-videos/$filename'),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to fetch videos: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching videos: $e');
+    }
+  }
 }

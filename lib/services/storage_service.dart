@@ -186,4 +186,40 @@ class StorageService {
   Future<void> clearMCQs() async {
     await _prefs.remove(_mcqsKey);
   }
+
+  // Cache videos for a document
+  Future<void> cacheVideos(
+      String uniqueFilename, Map<String, dynamic> videos) async {
+    await _prefs.setString('videos_$uniqueFilename', json.encode(videos));
+  }
+
+  // Get cached videos for a document
+  Map<String, dynamic>? getCachedVideos(String uniqueFilename) {
+    final cachedData = _prefs.getString('videos_$uniqueFilename');
+    if (cachedData != null) {
+      return json.decode(cachedData) as Map<String, dynamic>;
+    }
+    return null;
+  }
+
+  // Cache books for a document
+  Future<void> cacheBooks(
+      String uniqueFilename, Map<String, dynamic> books) async {
+    await _prefs.setString('books_$uniqueFilename', json.encode(books));
+  }
+
+  // Get cached books for a document
+  Map<String, dynamic>? getCachedBooks(String uniqueFilename) {
+    final cachedData = _prefs.getString('books_$uniqueFilename');
+    if (cachedData != null) {
+      return json.decode(cachedData) as Map<String, dynamic>;
+    }
+    return null;
+  }
+
+  // Clear cache for a document
+  Future<void> clearDocumentCache(String uniqueFilename) async {
+    await _prefs.remove('videos_$uniqueFilename');
+    await _prefs.remove('books_$uniqueFilename');
+  }
 }
