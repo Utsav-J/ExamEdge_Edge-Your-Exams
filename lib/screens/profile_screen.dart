@@ -1,3 +1,4 @@
+import 'package:examedge/reusable/developer_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
@@ -96,33 +97,39 @@ class ProfileScreen extends StatelessWidget {
 
             // Document History Section
             const Text(
-              'Document History',
+              'Meet the developers',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
-            Card(
-              child: ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: 5,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    leading: const Icon(Icons.description),
-                    title: Text('Document ${index + 1}'),
-                    subtitle: Text('Last accessed ${index + 1} days ago'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () {
-                        // Delete document
-                      },
-                    ),
-                  );
-                },
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  DeveloperCard(
+                    name: 'Utsav Jaiswal',
+                    role: 'Full Stack App Developer',
+                    linkedinUrl: 'https://www.linkedin.com/in/iamutsavjaiswal/',
+                    githubUrl: 'https://github.com/Utsav-J',
+                    imageUrl: 'assets/images/utsav.jpeg',
+                    glowColor: const Color.fromARGB(255, 158, 255, 166)
+                        .withOpacity(0.25),
+                  ),
+                  DeveloperCard(
+                    name: 'Ujjwal Agrahari',
+                    role: 'Full Stack Web Developer',
+                    linkedinUrl:
+                        'https://www.linkedin.com/in/ujjwal-agrahari-359105253/',
+                    githubUrl: 'https://github.com/Ujjwalagrhri918',
+                    imageUrl: 'assets/images/ujjwal.jpeg',
+                    glowColor: const Color.fromARGB(255, 158, 232, 255)
+                        .withOpacity(0.25),
+                  ),
+                ],
               ),
-            ),
+            )
           ],
         ),
       ),

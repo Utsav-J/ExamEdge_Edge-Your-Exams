@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'screens/main_screen.dart';
 import 'providers/theme_provider.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() {
   runApp(
     ChangeNotifierProvider(

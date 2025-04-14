@@ -179,7 +179,8 @@ class _DocumentQuizScreenState extends State<DocumentQuizScreen> {
           // Progress indicator
           LinearProgressIndicator(
             value: (_currentQuestionIndex + 1) / _mcqs!.length,
-            backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+            backgroundColor:
+                Theme.of(context).colorScheme.surfaceContainerHighest,
             valueColor: AlwaysStoppedAnimation<Color>(
               Theme.of(context).colorScheme.primary,
             ),
