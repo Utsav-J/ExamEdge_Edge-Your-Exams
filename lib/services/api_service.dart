@@ -41,6 +41,7 @@ class ApiService {
     }
 
     _baseUrl = updatedBaseUrl;
+    print("UPDATED BASED URL :::::: $_baseUrl");
     return _baseUrl!;
   }
 

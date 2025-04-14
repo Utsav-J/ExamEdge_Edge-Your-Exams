@@ -8,6 +8,7 @@ import 'file_upload_screen.dart';
 import 'document_screen.dart';
 import 'pdf_viewer_screen.dart';
 import 'dart:io';
+import '../services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late StorageService _storageService;
   List<RecentDocument> _recentDocuments = [];
   bool _isInitialized = false;
+  bool _isRefreshing = false;
 
   @override
   void initState() {
@@ -39,6 +41,43 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _recentDocuments = _storageService.getRecentDocuments();
     });
+  }
+
+  Future<void> _handleRefresh() async {
+    setState(() {
+      _isRefreshing = true;
+    });
+
+    try {
+      await ApiService.refreshAndGetBaseUrl();
+
+      _loadRecentDocuments();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Successfully refreshed configuration'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error refreshing: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
+    }
   }
 
   Future<void> _deleteDocument(RecentDocument document) async {
@@ -83,6 +122,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    if (!_isInitialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('ExamEdge'),
@@ -109,141 +152,140 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: !_isInitialized
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: ModernWelcomeCard(),
-                  ),
-                  const SizedBox(height: 16),
-                  _recentDocuments.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.folder_open,
-                                size: 64,
-                                color: Colors.grey,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No documents yet',
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                              const SizedBox(height: 8),
-                              ElevatedButton.icon(
-                                onPressed: () async {
-                                  final result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const FileUploadScreen(),
-                                    ),
-                                  );
-                                  if (result == true) {
-                                    _loadRecentDocuments();
-                                  }
-                                },
-                                icon: const Icon(Icons.add),
-                                label: const Text('Add Document'),
-                              ),
-                            ],
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: ModernWelcomeCard(),
+              ),
+              const SizedBox(height: 16),
+              _recentDocuments.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.folder_open,
+                            size: 64,
+                            color: Colors.grey,
                           ),
-                        )
-                      : ListView.builder(
-                          physics: const NeverScrollableScrollPhysics(),
-                          shrinkWrap: true,
-                          itemCount: _recentDocuments.length,
-                          itemBuilder: (context, index) {
-                            final document = _recentDocuments[index];
-                            return Dismissible(
-                              key: Key(document.uniqueFilename),
-                              direction: DismissDirection.endToStart,
-                              background: Container(
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 16.0),
-                                color: Theme.of(context).colorScheme.error,
-                                child: const Icon(
-                                  Icons.delete,
-                                  color: Colors.white,
+                          const SizedBox(height: 16),
+                          Text(
+                            'No documents yet',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 8),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const FileUploadScreen(),
                                 ),
-                              ),
-                              confirmDismiss: (direction) async {
-                                return await showDialog(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Delete Document'),
-                                    content: Text(
-                                      'Are you sure you want to delete ${document.fileName}?',
+                              );
+                              if (result == true) {
+                                _loadRecentDocuments();
+                              }
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add Document'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _recentDocuments.length,
+                      itemBuilder: (context, index) {
+                        final document = _recentDocuments[index];
+                        return Dismissible(
+                          key: Key(document.uniqueFilename),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 16.0),
+                            color: Theme.of(context).colorScheme.error,
+                            child: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                            ),
+                          ),
+                          confirmDismiss: (direction) async {
+                            return await showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Delete Document'),
+                                content: Text(
+                                  'Are you sure you want to delete ${document.fileName}?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: Text(
+                                      'Delete',
+                                      style: TextStyle(
+                                        color:
+                                            Theme.of(context).colorScheme.error,
+                                      ),
                                     ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, true),
-                                        child: Text(
-                                          'Delete',
-                                          style: TextStyle(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .error,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
                                   ),
-                                );
-                              },
-                              onDismissed: (direction) {
-                                _deleteDocument(document);
-                              },
-                              child: Card(
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 16.0,
-                                  vertical: 8.0,
-                                ),
-                                child: ListTile(
-                                  leading: Icon(
-                                    document.fileType == 'pdf'
-                                        ? Icons.picture_as_pdf
-                                        : Icons.insert_drive_file,
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                  ),
-                                  title: Text(document.fileName),
-                                  subtitle: Text(
-                                    'Edged: ${_formatDate(document.lastAccessed)}',
-                                  ),
-                                  trailing: const Icon(Icons.chevron_right),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => DocumentScreen(
-                                          uniqueFilename:
-                                              document.uniqueFilename,
-                                          fileName: document.fileName,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
+                                ],
                               ),
                             );
                           },
-                        ),
-                ],
-              ),
-            ),
+                          onDismissed: (direction) {
+                            _deleteDocument(document);
+                          },
+                          child: Card(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                              vertical: 8.0,
+                            ),
+                            child: ListTile(
+                              leading: Icon(
+                                document.fileType == 'pdf'
+                                    ? Icons.picture_as_pdf
+                                    : Icons.insert_drive_file,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              title: Text(document.fileName),
+                              subtitle: Text(
+                                'Edged: ${_formatDate(document.lastAccessed)}',
+                              ),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => DocumentScreen(
+                                      uniqueFilename: document.uniqueFilename,
+                                      fileName: document.fileName,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
