@@ -1,4 +1,7 @@
-![image](https://github.com/user-attachments/assets/2aa7cc4b-788d-4261-91fd-a4555f1f19d5)
+![Leverage AI to get summaries, key points and more](https://github.com/user-attachments/assets/9ac57f74-d3b1-409b-922b-838f465d8538)
+![AI generated quiz](https://github.com/user-attachments/assets/c0bc5274-4f81-4a51-a2d0-4f22c3b3f856)
+![Intelligent mentor recommendations + Chat with PDF](https://github.com/user-attachments/assets/fb4330fb-2db1-453e-bd4e-e921fc0139c6)
+
 
 ExamEdge is an AI-powered study companion application that helps students analyze and learn from their study materials more effectively. The application uses advanced AI to generate summaries, key points, and interactive quizzes from uploaded documents.
 
@@ -114,5 +117,5 @@ API_BASE_URL=your_backend_url
 - [ ] Advanced document analytics
 - [ ] Support for more file formats
 
-
+![image](https://github.com/user-attachments/assets/2aa7cc4b-788d-4261-91fd-a4555f1f19d5)
 Made with ❤️ by [Utsav-J](https://github.com/Utsav-J)
