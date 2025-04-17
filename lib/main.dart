@@ -16,7 +16,6 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await ApiService().initialize(); // initialize Remote Config
-
   runApp(
     MultiProvider(
       providers: [
