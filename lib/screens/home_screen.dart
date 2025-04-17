@@ -21,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late StorageService _storageService;
   List<RecentDocument> _recentDocuments = [];
   bool _isInitialized = false;
+  // ignore: unused_field
   bool _isRefreshing = false;
 
   @override

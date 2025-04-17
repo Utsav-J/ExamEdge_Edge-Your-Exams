@@ -1,30 +1,19 @@
 import 'package:examedge/reusable/developer_card.dart';
-import 'package:examedge/screens/login_screen.dart';
+import 'package:examedge/reusable/logout_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
+import '../providers/auth_provider.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
-
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.user;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile & Settings'),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const LoginScreen(),
-                ),
-              );
-            },
-            child: const Icon(Icons.login),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -40,8 +29,8 @@ class ProfileScreen extends StatelessWidget {
                     CircleAvatar(
                       radius: 50,
                       child: ClipOval(
-                        child: Image.asset(
-                          "assets/images/user.jpg",
+                        child: Image.network(
+                          user?.photoURL ?? "",
                           width: 100, // diameter (2 * radius)
                           height: 100,
                           fit: BoxFit.cover,
@@ -49,16 +38,16 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Utsav Jaiswal',
-                      style: TextStyle(
+                    Text(
+                      user?.displayName ?? "",
+                      style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const Text(
-                      'uj8866@srmist.edu.in',
-                      style: TextStyle(
+                    Text(
+                      user?.email ?? "",
+                      style: const TextStyle(
                         color: Colors.grey,
                       ),
                     ),
@@ -114,6 +103,10 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(
+              height: 16,
+            ),
+            LogoutButton(onTap: () => authProvider.signOut()),
             const SizedBox(height: 24),
             const Text(
               'Meet the developers',

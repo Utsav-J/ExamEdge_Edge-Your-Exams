@@ -1,13 +1,15 @@
 import 'package:examedge/firebase_options.dart';
+import 'package:examedge/providers/auth_provider.dart';
 import 'package:examedge/services/api_service.dart';
+import 'package:examedge/widgets/auth_wrapper.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'screens/main_screen.dart';
 import 'providers/theme_provider.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -16,8 +18,11 @@ void main() async {
   await ApiService().initialize(); // initialize Remote Config
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -44,6 +49,7 @@ class _MyAppState extends State<MyApp> {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'ExamEdge',
       themeMode: themeProvider.themeMode,
@@ -63,7 +69,7 @@ class _MyAppState extends State<MyApp> {
         textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
         useMaterial3: true,
       ),
-      home: const MainScreen(),
+      home: const AuthWrapper(),
     );
   }
 }

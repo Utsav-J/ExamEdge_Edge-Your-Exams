@@ -1,18 +1,33 @@
-import 'package:examedge/screens/logged_in_user_info.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
-class AuthService {
-  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-  User? getCurrentUser() => _firebaseAuth.currentUser;
+class AuthProvider extends ChangeNotifier {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  // final GoogleSignIn _googleSignIn = GoogleSignIn();
+  User? _user;
+  bool _isLoading = false;
+  String? _error;
 
-  Future<void> signOut() async {
-    return await _firebaseAuth.signOut();
+  AuthProvider() {
+    _auth.authStateChanges().listen((User? user) {
+      _user = user;
+      notifyListeners();
+    });
   }
 
+  User? get user => _user;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  bool get isAuthenticated => _user != null;
+
+  // Sign in with google account picker
   Future<void> signInWithGoogleAccountPicker(BuildContext context) async {
     try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
       final googleSignIn = GoogleSignIn();
       await googleSignIn.signOut(); // Force picker
       final googleUser = await googleSignIn.signIn();
@@ -24,22 +39,22 @@ class AuthService {
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-
-      await FirebaseAuth.instance.signInWithCredential(credential);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const LoggedInUserInfo(),
-        ),
-      );
+      await _auth.signInWithCredential(credential);
     } catch (e) {
+      _error = e.toString();
       showError(context, e.toString());
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   Future<void> signInSilentlyWithLastUsedAccount(
       BuildContext context, GoogleSignInAccount? _previousUser) async {
     try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
       final googleUser = _previousUser ?? await GoogleSignIn().signInSilently();
 
       if (googleUser == null) {
@@ -53,15 +68,28 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
 
-      await FirebaseAuth.instance.signInWithCredential(credential);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const LoggedInUserInfo(),
-        ),
-      );
+      await _auth.signInWithCredential(credential);
     } catch (e) {
+      _error = e.toString();
       showError(context, e.toString());
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> signOut() async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      await Future.wait([_auth.signOut()]);
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
