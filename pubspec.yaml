@@ -24,6 +24,8 @@ dependencies:
   firebase_core: ^3.13.0
   firebase_remote_config: ^5.4.3
   firebase_analytics: ^11.4.5
+  google_sign_in: ^6.2.2
+  firebase_auth: ^5.5.2
 
 dev_dependencies:
   flutter_test:
@@ -39,4 +41,5 @@ flutter_icons:
 flutter:
   uses-material-design: true
   assets:
+    - assets/
     - assets/images/ 

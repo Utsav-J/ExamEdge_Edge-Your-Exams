@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/faculty.dart';
-import '../reusable/mentor_profile_details.dart';
+import 'mentor_profile_details.dart';
 
 class FacultyListDialog extends StatelessWidget {
   final List<Faculty> faculties;

@@ -1,5 +1,5 @@
 import 'package:examedge/services/api_service.dart';
-import 'package:examedge/widgets/faculty_list_dialog.dart';
+import 'package:examedge/reusable/faculty_list_dialog.dart';
 import 'package:flutter/material.dart';
 
 class DocumentFAB extends StatefulWidget {
