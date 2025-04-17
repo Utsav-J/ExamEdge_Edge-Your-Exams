@@ -1,6 +1,5 @@
-import 'package:examedge/screens/logged_in_user_info.dart';
+import 'package:examedge/services/auth_service.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -13,6 +12,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   GoogleSignInAccount? _previousUser;
+  AuthService authService = AuthService();
   late AnimationController _animationController;
   late Animation<double> _animation;
 
@@ -45,68 +45,68 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  Future<void> _signInWithGoogleAccountPicker(BuildContext context) async {
-    try {
-      final googleSignIn = GoogleSignIn();
-      await googleSignIn.signOut(); // Force picker
-      final googleUser = await googleSignIn.signIn();
+  // Future<void> _signInWithGoogleAccountPicker(BuildContext context) async {
+  //   try {
+  //     final googleSignIn = GoogleSignIn();
+  //     await googleSignIn.signOut(); // Force picker
+  //     final googleUser = await googleSignIn.signIn();
 
-      if (googleUser == null) return;
+  //     if (googleUser == null) return;
 
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
+  //     final googleAuth = await googleUser.authentication;
+  //     final credential = GoogleAuthProvider.credential(
+  //       accessToken: googleAuth.accessToken,
+  //       idToken: googleAuth.idToken,
+  //     );
 
-      await FirebaseAuth.instance.signInWithCredential(credential);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const LoggedInUserInfo(),
-        ),
-      );
-    } catch (e) {
-      _showError(context, e.toString());
-    }
-  }
+  //     await FirebaseAuth.instance.signInWithCredential(credential);
+  //     Navigator.pushReplacement(
+  //       context,
+  //       MaterialPageRoute(
+  //         builder: (context) => const LoggedInUserInfo(),
+  //       ),
+  //     );
+  //   } catch (e) {
+  //     _showError(context, e.toString());
+  //   }
+  // }
 
-  Future<void> _signInSilentlyWithLastUsedAccount(BuildContext context) async {
-    try {
-      final googleUser = _previousUser ?? await GoogleSignIn().signInSilently();
+  // Future<void> _signInSilentlyWithLastUsedAccount(BuildContext context) async {
+  //   try {
+  //     final googleUser = _previousUser ?? await GoogleSignIn().signInSilently();
 
-      if (googleUser == null) {
-        _showError(context, 'No previously signed-in account found.');
-        return;
-      }
+  //     if (googleUser == null) {
+  //       _showError(context, 'No previously signed-in account found.');
+  //       return;
+  //     }
 
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
+  //     final googleAuth = await googleUser.authentication;
+  //     final credential = GoogleAuthProvider.credential(
+  //       accessToken: googleAuth.accessToken,
+  //       idToken: googleAuth.idToken,
+  //     );
 
-      await FirebaseAuth.instance.signInWithCredential(credential);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const LoggedInUserInfo(),
-        ),
-      );
-    } catch (e) {
-      _showError(context, e.toString());
-    }
-  }
+  //     await FirebaseAuth.instance.signInWithCredential(credential);
+  //     Navigator.pushReplacement(
+  //       context,
+  //       MaterialPageRoute(
+  //         builder: (context) => const LoggedInUserInfo(),
+  //       ),
+  //     );
+  //   } catch (e) {
+  //     _showError(context, e.toString());
+  //   }
+  // }
 
-  void _showError(BuildContext context, String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-  }
+  // void _showError(BuildContext context, String msg) {
+  //   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  // }
 
   @override
   @override
   Widget build(BuildContext context) {
     final hasPrevUser = _previousUser != null;
-    final colorScheme = Theme.of(context).colorScheme;
+    // final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: Stack(
         children: [
@@ -157,7 +157,8 @@ class _LoginScreenState extends State<LoginScreen>
                     height: 180,
                   ),
                   ElevatedButton.icon(
-                    onPressed: () => _signInWithGoogleAccountPicker(context),
+                    onPressed: () =>
+                        authService.signInWithGoogleAccountPicker(context),
                     icon: const Icon(Icons.account_circle),
                     label: const Text('Sign in with Google'),
                     style: ElevatedButton.styleFrom(
@@ -169,7 +170,8 @@ class _LoginScreenState extends State<LoginScreen>
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: hasPrevUser
-                        ? () => _signInSilentlyWithLastUsedAccount(context)
+                        ? () => authService.signInSilentlyWithLastUsedAccount(
+                            context, _previousUser)
                         : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: hasPrevUser
