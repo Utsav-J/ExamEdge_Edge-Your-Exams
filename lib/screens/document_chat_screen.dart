@@ -1,4 +1,3 @@
-import 'package:examedge/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/chat_provider.dart';
@@ -14,8 +13,22 @@ class DocumentChatScreen extends StatefulWidget {
 class _DocumentChatScreenState extends State<DocumentChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final ApiService _apiService = ApiService();
   bool _isRecording = false;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeChat();
+  }
+
+  Future<void> _initializeChat() async {
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    await chatProvider.initialize(widget.uniqueFilename);
+    if (mounted) {
+      setState(() => _isInitialized = true);
+    }
+  }
 
   @override
   void dispose() {
@@ -47,30 +60,17 @@ class _DocumentChatScreenState extends State<DocumentChatScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    context.read<ChatProvider>().addMessage(text, true);
     _messageController.clear();
     _scrollToBottom();
 
     try {
-      final response =
-          await _apiService.chatWithPdf(widget.uniqueFilename, text);
-      final aiMessage = response['response'] as String;
-      final pages = response['pages_used'] as List;
-      final citations = pages.map((page) => "Page $page").toList();
-
-      if (mounted) {
-        context
-            .read<ChatProvider>()
-            .addMessage(aiMessage, false, citations: citations);
-        _scrollToBottom();
-      }
+      await context.read<ChatProvider>().sendMessage(text);
+      _scrollToBottom();
     } catch (e) {
       if (mounted) {
-        context.read<ChatProvider>().addMessage(
-              'Sorry, something went wrong while fetching the response.',
-              false,
-            );
-        _scrollToBottom();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
       }
       debugPrint('Chat error: $e');
     }
@@ -78,6 +78,10 @@ class _DocumentChatScreenState extends State<DocumentChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Column(
       children: [
         // Chat Messages

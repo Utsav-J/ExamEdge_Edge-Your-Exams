@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/recent_document.dart';
 import '../models/mcq.dart';
+import '../models/chat_conversation.dart';
 
 class StorageService {
   static const String _recentDocumentsKey = 'recent_documents';
   static const String _themeModeKey = 'theme_mode';
   static const String _documentSummariesKey = 'document_summaries';
   static const String _mcqsKey = 'document_mcqs';
+  static const String _chatConversationsKey = 'chat_conversations';
   // static const int _maxRecentDocuments = 10;
 
   late SharedPreferences _prefs;
@@ -221,5 +223,54 @@ class StorageService {
   Future<void> clearDocumentCache(String uniqueFilename) async {
     await _prefs.remove('videos_$uniqueFilename');
     await _prefs.remove('books_$uniqueFilename');
+  }
+
+  // Chat Conversations
+  Future<void> saveChatConversation(ChatConversation conversation) async {
+    final conversations = await getChatConversations();
+    conversations[conversation.documentId] = conversation;
+
+    final conversationsJson = conversations.map(
+      (key, value) => MapEntry(key, value.toJson()),
+    );
+
+    await _prefs.setString(
+        _chatConversationsKey, json.encode(conversationsJson));
+  }
+
+  Future<Map<String, ChatConversation>> getChatConversations() async {
+    final conversationsJson = _prefs.getString(_chatConversationsKey);
+    if (conversationsJson == null) return {};
+
+    try {
+      final Map<String, dynamic> decoded = json.decode(conversationsJson);
+      return decoded.map(
+        (key, value) => MapEntry(key, ChatConversation.fromJson(value)),
+      );
+    } catch (e) {
+      print('Error parsing chat conversations: $e');
+      return {};
+    }
+  }
+
+  Future<ChatConversation?> getChatConversation(String documentId) async {
+    final conversations = await getChatConversations();
+    return conversations[documentId];
+  }
+
+  Future<void> clearChatConversation(String documentId) async {
+    final conversations = await getChatConversations();
+    conversations.remove(documentId);
+
+    final conversationsJson = conversations.map(
+      (key, value) => MapEntry(key, value.toJson()),
+    );
+
+    await _prefs.setString(
+        _chatConversationsKey, json.encode(conversationsJson));
+  }
+
+  Future<void> clearAllChatConversations() async {
+    await _prefs.remove(_chatConversationsKey);
   }
 }
