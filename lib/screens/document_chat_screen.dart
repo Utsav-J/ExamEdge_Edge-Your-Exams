@@ -1,7 +1,11 @@
+import 'package:examedge/services/api_service.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/chat_provider.dart';
 
 class DocumentChatScreen extends StatefulWidget {
-  const DocumentChatScreen({super.key});
+  final String uniqueFilename;
+  const DocumentChatScreen({super.key, required this.uniqueFilename});
 
   @override
   State<DocumentChatScreen> createState() => _DocumentChatScreenState();
@@ -10,6 +14,7 @@ class DocumentChatScreen extends StatefulWidget {
 class _DocumentChatScreenState extends State<DocumentChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ApiService _apiService = ApiService();
   bool _isRecording = false;
 
   @override
@@ -20,12 +25,54 @@ class _DocumentChatScreenState extends State<DocumentChatScreen> {
   }
 
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  void _handleVoiceInput() {
+    setState(() {
+      _isRecording = !_isRecording;
+    });
+    // Implement voice input handling logic
+  }
+
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    context.read<ChatProvider>().addMessage(text, true);
+    _messageController.clear();
+    _scrollToBottom();
+
+    try {
+      final response =
+          await _apiService.chatWithPdf(widget.uniqueFilename, text);
+      final aiMessage = response['response'] as String;
+      final pages = response['pages_used'] as List;
+      final citations = pages.map((page) => "Page $page").toList();
+
+      if (mounted) {
+        context
+            .read<ChatProvider>()
+            .addMessage(aiMessage, false, citations: citations);
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
+        context.read<ChatProvider>().addMessage(
+              'Sorry, something went wrong while fetching the response.',
+              false,
+            );
+        _scrollToBottom();
+      }
+      debugPrint('Chat error: $e');
     }
   }
 
@@ -35,62 +82,75 @@ class _DocumentChatScreenState extends State<DocumentChatScreen> {
       children: [
         // Chat Messages
         Expanded(
-          child: ListView.builder(
-            controller: _scrollController,
-            padding: const EdgeInsets.all(16.0),
-            itemCount: 2, // Replace with actual message count
-            itemBuilder: (context, index) {
-              final isUser = index % 2 == 0;
-              return Align(
-                alignment:
-                    isUser ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 16.0),
-                  padding: const EdgeInsets.all(12.0),
-                  decoration: BoxDecoration(
-                    color: isUser
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.surfaceVariant,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.75,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isUser ? 'You' : 'AI Assistant',
-                        style: TextStyle(
-                          color: isUser
-                              ? Theme.of(context).colorScheme.onPrimary
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.bold,
-                        ),
+          child: Consumer<ChatProvider>(
+            builder: (context, chatProvider, _) {
+              return ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(16.0),
+                itemCount: chatProvider.messages.length,
+                itemBuilder: (context, index) {
+                  final message = chatProvider.messages[index];
+                  final isUser = message.isUser;
+
+                  return Align(
+                    alignment:
+                        isUser ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 16.0),
+                      padding: const EdgeInsets.all(12.0),
+                      decoration: BoxDecoration(
+                        color: isUser
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.surfaceVariant,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'This is a sample message. The actual messages will be based on the document content.',
-                        style: TextStyle(
-                          color: isUser
-                              ? Theme.of(context).colorScheme.onPrimary
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.75,
                       ),
-                      if (!isUser) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Source: Page 2, Paragraph 3',
-                          style: TextStyle(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontSize: 12,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isUser ? 'You' : 'AI Assistant',
+                            style: TextStyle(
+                              color: isUser
+                                  ? Theme.of(context).colorScheme.onPrimary
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                          const SizedBox(height: 4),
+                          Text(
+                            message.content,
+                            style: TextStyle(
+                              color: isUser
+                                  ? Theme.of(context).colorScheme.onPrimary
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                            ),
+                          ),
+                          if (message.citations != null &&
+                              message.citations!.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'Sources: ${message.citations!.join(", ")}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant
+                                    .withOpacity(0.7),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
               );
             },
           ),
@@ -114,12 +174,7 @@ class _DocumentChatScreenState extends State<DocumentChatScreen> {
               children: [
                 IconButton(
                   icon: Icon(_isRecording ? Icons.stop : Icons.mic),
-                  onPressed: () {
-                    setState(() {
-                      _isRecording = !_isRecording;
-                    });
-                    // Handle voice recording
-                  },
+                  onPressed: _handleVoiceInput,
                 ),
                 Expanded(
                   child: TextField(
@@ -136,24 +191,12 @@ class _DocumentChatScreenState extends State<DocumentChatScreen> {
                     ),
                     maxLines: null,
                     textInputAction: TextInputAction.send,
-                    onSubmitted: (value) {
-                      if (value.trim().isNotEmpty) {
-                        // Handle send message
-                        _messageController.clear();
-                        _scrollToBottom();
-                      }
-                    },
+                    onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.send),
-                  onPressed: () {
-                    if (_messageController.text.trim().isNotEmpty) {
-                      // Handle send message
-                      _messageController.clear();
-                      _scrollToBottom();
-                    }
-                  },
+                  onPressed: _sendMessage,
                 ),
               ],
             ),

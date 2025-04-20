@@ -133,4 +133,27 @@ class ApiService {
       throw Exception('Failed to fetch faculties: ${response.statusCode}');
     }
   }
+
+  Future<Map<String, dynamic>> chatWithPdf(
+      String filename, String query) async {
+    final baseUrl = await _getBaseUrl();
+    final url = Uri.parse('$baseUrl/chat-with-pdf/$filename');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(
+        {
+          "query": query,
+        },
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception("High load, try again later: ${response.statusCode}");
+    }
+  }
 }

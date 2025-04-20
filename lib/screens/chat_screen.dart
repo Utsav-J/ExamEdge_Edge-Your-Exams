@@ -1,9 +1,11 @@
+import 'package:examedge/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/chat_provider.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  const ChatScreen({super.key, required this.uniqueFilename});
+  final String uniqueFilename;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -12,7 +14,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   bool _isRecording = false;
-
+  final _apiService = ApiService();
   @override
   void dispose() {
     _messageController.dispose();
@@ -26,25 +28,39 @@ class _ChatScreenState extends State<ChatScreen> {
     // Implement voice recording logic
   }
 
-  void _sendMessage() {
+  void _sendMessage() async {
+    print("got here");
     if (_messageController.text.trim().isEmpty) return;
+    print("got here 2");
 
-    context.read<ChatProvider>().addMessage(
-          _messageController.text,
-          true,
-        );
+    final userInput = _messageController.text.trim();
+    context.read<ChatProvider>().addMessage(userInput, true);
     _messageController.clear();
 
-    // Simulate AI response
-    Future.delayed(const Duration(seconds: 1), () {
+    try {
+      final response =
+          await _apiService.chatWithPdf(widget.uniqueFilename, userInput);
+
+      final aiMessage = response['response'] as String;
+      final pages = response['pages_used'] as List;
+      List<String> stringPages = pages.map((page) => "Page $page").toList();
+
       if (mounted) {
         context.read<ChatProvider>().addMessage(
-          'This is a simulated AI response with citations from the document.',
-          false,
-          citations: ['Document 1, Page 2', 'Document 2, Page 5'],
-        );
+              aiMessage,
+              false,
+              citations: stringPages,
+            );
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        context.read<ChatProvider>().addMessage(
+              'Sorry, something went wrong while fetching the response.',
+              false,
+            );
+      }
+      debugPrint('Error during chat: $e');
+    }
   }
 
   @override
@@ -155,9 +171,13 @@ class _ChatScreenState extends State<ChatScreen> {
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _sendMessage,
+                Material(
+                  child: IconButton(
+                    icon: const Icon(Icons.get_app),
+                    onPressed: () {
+                      print("working");
+                    },
+                  ),
                 ),
               ],
             ),

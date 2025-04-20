@@ -1,8 +1,10 @@
+import 'package:examedge/providers/chat_provider.dart';
 import 'package:examedge/screens/document_chat_screen.dart';
 import 'package:examedge/screens/document_quiz_screen.dart';
 import 'package:examedge/screens/document_resources_screen.dart';
 import 'package:examedge/screens/document_summary_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../reusable/document_fab.dart';
 
 class DocumentScreen extends StatefulWidget {
@@ -32,7 +34,12 @@ class _DocumentScreenState extends State<DocumentScreen> {
       DocumentResourcesScreen(
         uniqueFilename: widget.uniqueFilename,
       ),
-      const DocumentChatScreen(),
+      ChangeNotifierProvider(
+        create: (_) => ChatProvider(),
+        child: DocumentChatScreen(
+          uniqueFilename: widget.uniqueFilename,
+        ),
+      ),
     ];
   }
 
