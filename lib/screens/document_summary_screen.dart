@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/document_summary.dart';
-import '../services/storage_service.dart';
+import '../services/firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DocumentSummaryScreen extends StatefulWidget {
   final String uniqueFilename;
@@ -16,53 +17,64 @@ class DocumentSummaryScreen extends StatefulWidget {
 }
 
 class _DocumentSummaryScreenState extends State<DocumentSummaryScreen> {
-  final _apiService = ApiService();
-  late final StorageService _storageService;
-  DocumentSummary? _summary;
+  final FirestoreService _firestoreService = FirestoreService();
+  final ApiService _apiService = ApiService();
   bool _isLoading = true;
+  DocumentSummary? _summary;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _initStorage();
-  }
-
-  Future<void> _initStorage() async {
-    _storageService = await StorageService.init();
     _loadSummary();
   }
 
   Future<void> _loadSummary() async {
     try {
-      // Try to get cached summary first
-      final cachedSummary =
-          _storageService.getDocumentSummary(widget.uniqueFilename);
+      setState(() => _isLoading = true);
+
+      // Try to get summary from Firestore first
+      final cachedSummary = await _firestoreService.getDocumentSummary(
+        widget.uniqueFilename,
+      );
 
       if (cachedSummary != null) {
         setState(() {
-          _summary = DocumentSummary.fromJson(cachedSummary);
+          _summary = cachedSummary;
           _isLoading = false;
         });
         return;
       }
 
-      // If no cached summary, fetch from API
+      // If not in Firestore, fetch from API
       final response = await _apiService.generateSummary(widget.uniqueFilename);
 
-      // Cache the summary
-      await _storageService.saveDocumentSummary(
-          widget.uniqueFilename, response);
+      final summary = DocumentSummary(
+        documentOverview: response['document_overview'],
+        keyPoints: List<String>.from(response['key_points']),
+        mainTopics: List<String>.from(response['main_topics']),
+        userId: FirebaseAuth.instance.currentUser!.uid,
+      );
 
-      setState(() {
-        _summary = DocumentSummary.fromJson(response);
-        _isLoading = false;
-      });
+      // Save to Firestore
+      await _firestoreService.saveDocumentSummary(
+        widget.uniqueFilename,
+        summary,
+      );
+
+      if (mounted) {
+        setState(() {
+          _summary = summary;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = 'Error loading summary: $e';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -74,31 +86,22 @@ class _DocumentSummaryScreenState extends State<DocumentSummaryScreen> {
 
     if (_error != null) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                size: 48,
-                color: Colors.red,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadSummary,
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Error: $_error'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadSummary,
+              child: const Text('Retry'),
+            ),
+          ],
         ),
       );
+    }
+
+    if (_summary == null) {
+      return const Center(child: Text('No summary available'));
     }
 
     return SingleChildScrollView(
@@ -106,7 +109,6 @@ class _DocumentSummaryScreenState extends State<DocumentSummaryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Document Overview
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -123,9 +125,7 @@ class _DocumentSummaryScreenState extends State<DocumentSummaryScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-
-          // Key Points
+          const SizedBox(height: 8),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -152,9 +152,7 @@ class _DocumentSummaryScreenState extends State<DocumentSummaryScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-
-          // Main Topics
+          const SizedBox(height: 8),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -182,6 +180,8 @@ class _DocumentSummaryScreenState extends State<DocumentSummaryScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 24),
+          const Text(" ")
         ],
       ),
     );
