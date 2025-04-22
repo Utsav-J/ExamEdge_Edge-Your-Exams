@@ -14,6 +14,9 @@ class FirestoreService {
   CollectionReference get _mcqsCollection =>
       _firestore.collection('document_mcqs');
 
+  CollectionReference get _resourcesCollection =>
+      _firestore.collection('document_resources');
+
   // Get document summary from Firestore
   Future<DocumentSummary?> getDocumentSummary(String uniqueFilename) async {
     try {
@@ -154,6 +157,70 @@ class FirestoreService {
           .delete();
     } catch (e) {
       print('Error deleting MCQs: $e');
+    }
+  }
+
+  // Get resources from Firestore
+  Future<Map<String, dynamic>?> getDocumentResources(
+      String uniqueFilename) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return null;
+
+      final docRef = _resourcesCollection
+          .doc(user.uid)
+          .collection('resources')
+          .doc(uniqueFilename);
+
+      final doc = await docRef.get();
+      if (!doc.exists) return null;
+
+      return doc.data() as Map<String, dynamic>;
+    } catch (e) {
+      print('Error getting resources: $e');
+      return null;
+    }
+  }
+
+  // Save resources to Firestore
+  Future<void> saveDocumentResources(
+    String uniqueFilename,
+    Map<String, dynamic> videos,
+    Map<String, dynamic> books,
+  ) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw 'No user logged in';
+
+      await _resourcesCollection
+          .doc(user.uid)
+          .collection('resources')
+          .doc(uniqueFilename)
+          .set({
+        'videos': videos,
+        'books': books,
+        'createdAt': FieldValue.serverTimestamp(),
+        'userId': user.uid,
+      });
+    } catch (e) {
+      print('Error saving resources: $e');
+      throw e;
+    }
+  }
+
+  // Delete resources from Firestore
+  Future<void> deleteDocumentResources(String uniqueFilename) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      await _resourcesCollection
+          .doc(user.uid)
+          .collection('resources')
+          .doc(uniqueFilename)
+          .delete();
+    } catch (e) {
+      print('Error deleting resources: $e');
     }
   }
 }

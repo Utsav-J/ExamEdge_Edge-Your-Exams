@@ -7,7 +7,8 @@ import '../reusable/book_details_dialog.dart';
 import '../services/api_service.dart';
 import 'package:html_unescape/html_unescape.dart';
 import '../models/video.dart';
-import '../services/storage_service.dart';
+// import '../services/storage_service.dart';
+import '../services/firestore_service.dart';
 
 class DocumentResourcesScreen extends StatefulWidget {
   final String uniqueFilename;
@@ -25,7 +26,7 @@ class DocumentResourcesScreen extends StatefulWidget {
 class _DocumentResourcesScreenState extends State<DocumentResourcesScreen> {
   final unescape = HtmlUnescape();
   final _apiService = ApiService();
-  late final StorageService _storageService;
+  final _firestoreService = FirestoreService();
   bool _isLoadingVideos = false;
   bool _isLoadingBooks = false;
   bool _isInitialized = false;
@@ -37,30 +38,25 @@ class _DocumentResourcesScreenState extends State<DocumentResourcesScreen> {
   @override
   void initState() {
     super.initState();
-    _initStorage();
+    _checkFirestoreResources();
   }
 
-  Future<void> _initStorage() async {
-    _storageService = await StorageService.init();
-    _checkCachedResources();
-  }
-
-  Future<void> _checkCachedResources() async {
+  Future<void> _checkFirestoreResources() async {
     try {
-      // Check cached videos and books
-      final cachedVideos =
-          _storageService.getCachedVideos(widget.uniqueFilename);
-      final cachedBooks = _storageService.getCachedBooks(widget.uniqueFilename);
+      // Check resources in Firestore
+      final resources =
+          await _firestoreService.getDocumentResources(widget.uniqueFilename);
 
-      if (cachedVideos != null) {
-        final videosData = cachedVideos['videos'] as Map<String, dynamic>;
+      if (resources != null) {
+        // Process videos
+        final videosData = resources['videos'] as Map<String, dynamic>;
         _videos = videosData.entries.map((entry) {
           return Video.fromJson(entry.key, entry.value as Map<String, dynamic>);
         }).toList();
-      }
 
-      if (cachedBooks != null) {
-        final booksData = cachedBooks['books'][0] as Map<String, dynamic>;
+        // Process books
+        final booksData =
+            (resources['books'] as List<dynamic>)[0] as Map<String, dynamic>;
         _books = booksData.entries.map((entry) {
           return Book.fromJson(entry.key, entry.value as Map<String, dynamic>);
         }).toList();
@@ -74,7 +70,7 @@ class _DocumentResourcesScreenState extends State<DocumentResourcesScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _videoError = 'Error checking cached resources: $e';
+          _videoError = 'Error checking stored resources: $e';
           _isInitialized = true;
         });
       }
@@ -96,11 +92,12 @@ class _DocumentResourcesScreenState extends State<DocumentResourcesScreen> {
         _apiService.fetchBooks(widget.uniqueFilename),
       ]);
 
-      // Cache the results
-      await Future.wait([
-        _storageService.cacheVideos(widget.uniqueFilename, results[0]),
-        _storageService.cacheBooks(widget.uniqueFilename, results[1]),
-      ]);
+      // Save to Firestore
+      await _firestoreService.saveDocumentResources(
+        widget.uniqueFilename,
+        results[0]['videos'] as Map<String, dynamic>,
+        results[1]['books'][0] as Map<String, dynamic>,
+      );
 
       // Process videos
       final videosData = results[0]['videos'] as Map<String, dynamic>;
@@ -258,10 +255,10 @@ class _DocumentResourcesScreenState extends State<DocumentResourcesScreen> {
   }
 
   Future<void> _refreshResources() async {
-    // Clear the cache
-    await _storageService.clearDocumentCache(widget.uniqueFilename);
+    // Delete from Firestore
+    await _firestoreService.deleteDocumentResources(widget.uniqueFilename);
     // Reload resources
-    _checkCachedResources();
+    _checkFirestoreResources();
   }
 
   Future<void> _launchUrl(String url) async {
