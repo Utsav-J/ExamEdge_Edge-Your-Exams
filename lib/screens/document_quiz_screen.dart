@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/mcq.dart';
 import '../services/api_service.dart';
-import '../services/storage_service.dart';
+import '../services/firestore_service.dart';
 
 class DocumentQuizScreen extends StatefulWidget {
   final String uniqueFilename;
@@ -17,9 +17,10 @@ class DocumentQuizScreen extends StatefulWidget {
 
 class _DocumentQuizScreenState extends State<DocumentQuizScreen> {
   final _apiService = ApiService();
-  late final StorageService _storageService;
+  final _firestoreService = FirestoreService();
   List<MCQ>? _mcqs;
-  bool _isLoading = true;
+  bool _isLoading = false;
+  bool _isInitialized = false;
   String? _error;
   int _currentQuestionIndex = 0;
   Map<int, String?> _userAnswers = {};
@@ -28,48 +29,57 @@ class _DocumentQuizScreenState extends State<DocumentQuizScreen> {
   @override
   void initState() {
     super.initState();
-    _initStorage();
+    _checkFirestoreMCQs();
   }
 
-  Future<void> _initStorage() async {
-    _storageService = await StorageService.init();
-    _loadMCQs();
+  Future<void> _checkFirestoreMCQs() async {
+    try {
+      // Try to get MCQs from Firestore
+      final storedMCQs =
+          await _firestoreService.getDocumentMCQs(widget.uniqueFilename);
+
+      if (mounted) {
+        setState(() {
+          _mcqs = storedMCQs;
+          _isInitialized = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Error checking stored MCQs: $e';
+          _isInitialized = true;
+        });
+      }
+    }
   }
 
-  Future<void> _loadMCQs() async {
+  Future<void> _generateMCQs() async {
     try {
       setState(() {
         _isLoading = true;
         _error = null;
       });
 
-      // Try to get cached MCQs first
-      final cachedMCQs =
-          await _storageService.getCachedMCQsForDocument(widget.uniqueFilename);
-
-      if (cachedMCQs != null) {
-        setState(() {
-          _mcqs = cachedMCQs;
-          _isLoading = false;
-        });
-        return;
-      }
-
-      // If no cached MCQs, fetch from API
+      // Fetch from API
       final mcqs = await _apiService.generateMCQs(widget.uniqueFilename);
 
-      // Cache the MCQs
-      await _storageService.cacheMCQs(widget.uniqueFilename, mcqs);
+      // Save to Firestore
+      await _firestoreService.saveMCQs(widget.uniqueFilename, mcqs);
 
-      setState(() {
-        _mcqs = mcqs;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _mcqs = mcqs;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = 'Error loading MCQs: $e';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = 'Error generating MCQs: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -118,10 +128,86 @@ class _DocumentQuizScreenState extends State<DocumentQuizScreen> {
     return correct;
   }
 
+  Widget _buildGenerateButton() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceVariant,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.quiz,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Generate Quiz Questions',
+                  style: Theme.of(context).textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Create MCQs based on your document content',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: _generateMCQs,
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('Generate MCQs'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    if (!_isInitialized) {
       return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_isLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Generating quiz questions...',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ],
+        ),
+      );
     }
 
     if (_error != null) {
@@ -144,8 +230,9 @@ class _DocumentQuizScreenState extends State<DocumentQuizScreen> {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: _loadMCQs,
-                child: const Text('Retry'),
+                onPressed: _mcqs == null ? _generateMCQs : _checkFirestoreMCQs,
+                child:
+                    Text(_mcqs == null ? 'Retry Generation' : 'Retry Loading'),
               ),
             ],
           ),
@@ -153,7 +240,11 @@ class _DocumentQuizScreenState extends State<DocumentQuizScreen> {
       );
     }
 
-    if (_mcqs == null || _mcqs!.isEmpty) {
+    if (_mcqs == null) {
+      return _buildGenerateButton();
+    }
+
+    if (_mcqs!.isEmpty) {
       return const Center(
         child: Text('No MCQs available for this document.'),
       );

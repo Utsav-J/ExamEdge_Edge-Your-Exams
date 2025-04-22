@@ -24,13 +24,6 @@ class RecentDocument {
   }
 
   factory RecentDocument.fromJson(Map<String, dynamic> json) {
-    // return RecentDocument(
-    //   fileName: json['fileName'] ,
-    //   fileType: json['fileType'],
-    //   localFilePath: json['localFilePath'],
-    //   lastAccessed: DateTime.parse(json['lastAccessed']),
-    //   uniqueFilename: json['uniqueFilename'],
-    // );
     return RecentDocument(
         fileName: json['fileName'] ?? '',
         fileType: json['fileType'] ?? '',

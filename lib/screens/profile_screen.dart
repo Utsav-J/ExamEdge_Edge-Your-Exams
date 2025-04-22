@@ -132,25 +132,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ? const Icon(Icons.person, size: 50)
                           : null,
                     ),
-                    // if (_isEditing)
-                    //   Positioned(
-                    //     right: 0,
-                    //     bottom: 0,
-                    //     child: CircleAvatar(
-                    //       backgroundColor:
-                    //           Theme.of(context).colorScheme.primary,
-                    //       radius: 18,
-                    //       child: IconButton(
-                    //         icon: const Icon(Icons.camera_alt, size: 18),
-                    //         color: Theme.of(context).colorScheme.onPrimary,
-                    //         onPressed: _pickImage,
-                    //       ),
-                    //     ),
-                    //   ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
               if (_isEditing)
                 Form(
                   key: _formKey,
@@ -169,13 +153,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       ElevatedButton(
                         onPressed:
                             _isLoading ? null : () => _updateProfile(context),
                         child: _isLoading
                             ? const SizedBox(
-                                height: 20,
+                                height: 10,
                                 width: 20,
                                 child:
                                     CircularProgressIndicator(strokeWidth: 2),
@@ -196,7 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
               // Settings Section
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
               const Text(
                 'Settings',
                 style: TextStyle(
@@ -231,12 +215,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       },
                     ),
                     const Divider(),
-                    ListTile(
+                    SwitchListTile(
                       title: const Text('Notifications'),
-                      subtitle: const Text('Manage notification preferences'),
-                      trailing: const Icon(Icons.arrow_forward_ios),
-                      onTap: () {
-                        // Show notification settings
+                      subtitle: const Text('Toggle notifications preferences'),
+                      value: false,
+                      onChanged: (value) {
+                        value = !value;
                       },
                     ),
                   ],
